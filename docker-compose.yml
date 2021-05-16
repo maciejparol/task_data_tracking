@@ -1,0 +1,46 @@
+version: '3.6'
+services:
+    server:
+        image: data_tracking
+        build:
+            context: .
+            dockerfile: dockerfiles/backend/Dockerfile
+            network: host
+        depends_on:
+            - postgres
+        environment:
+            - DB_URL=postgresql://data_tracking:data_tracking@postgres:5432/data_tracking
+        networks:
+            - backend
+        volumes:
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+    postgres:
+        image: postgres:13.3-alpine
+        restart: always
+        environment:
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+        networks:
+            - backend
+        volumes:
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+            - ./config_files/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+            - ./app/sql/init_app.sql:/docker-entrypoint-initdb.d/init_app.sql
+    nginx:
+        build:
+            context: .
+            dockerfile: dockerfiles/frontend/Dockerfile
+        ports:
+            - 80:80
+        networks:
+            - backend
+        volumes:
+            - ./nginx/docker.conf:/etc/nginx/nginx.conf:ro
+        depends_on:
+            - server
+
+networks:
+  backend:
+    driver: bridge
